@@ -5,17 +5,32 @@ A Go-based backend for a daily note-taking application with activity tracking an
 ## Prerequisites
 
 - Go 1.21 or later
-- PostgreSQL database
+- Docker and Docker Compose (recommended)
+- PostgreSQL database (if not using Docker)
 
 ## Setup
 
-1. Create a PostgreSQL database named `dailyact`
-2. Set the following environment variables (optional, defaults provided):
-   - `DB_HOST` (default: localhost)
-   - `DB_USER` (default: postgres)
-   - `DB_PASSWORD` (default: postgres)
-   - `DB_NAME` (default: dailyact)
-   - `DB_PORT` (default: 5432)
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/fahrimz/dailyact-be.git
+   cd dailyact-be
+   ```
+
+2. Set up environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+   Modify the `.env` file with your desired configuration.
+
+3. Start the database (choose one):
+
+   a. Using Docker (recommended):
+   ```bash
+   docker-compose up -d
+   ```
+
+   b. Without Docker:
+   Create a PostgreSQL database and update the `.env` file with your database credentials.
 
 ## Running the Application
 
