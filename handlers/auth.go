@@ -3,13 +3,13 @@ package handlers
 import (
 	"dailyact/models"
 	"dailyact/types"
+	"dailyact/utils"
 	"encoding/json"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"gorm.io/gorm"
@@ -130,15 +130,8 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 		return
 	}
 
-	// Generate JWT
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": user.ID,
-		"email":   user.Email,
-		"role":    user.Role,
-		"exp":     time.Now().Add(24 * time.Hour).Unix(),
-	})
-
-	tokenString, err := jwtToken.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	// Generate JWT token
+	tokenString, err := utils.GenerateJWT(user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
 			"AUTH_ERROR",

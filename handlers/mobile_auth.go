@@ -3,6 +3,7 @@ package handlers
 import (
 	"dailyact/models"
 	"dailyact/types"
+	"dailyact/utils"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -139,7 +140,7 @@ func (h *MobileAuthHandler) VerifyGoogleToken(c *gin.Context) {
 	}
 
 	// Generate JWT token
-	token, err := GenerateJWT(user)
+	token, err := utils.GenerateJWT(user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
 			"TOKEN_GENERATION_ERROR",
@@ -149,12 +150,9 @@ func (h *MobileAuthHandler) VerifyGoogleToken(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, types.SuccessResponse{
-		Success: true,
-		Message: "Login successful",
-		Data: gin.H{
-			"token": token,
-			"user":  user,
-		},
-	})
+	c.JSON(http.StatusOK, types.NewSuccessResponse(
+		"Login successful",
+		gin.H{"token": token, "user": user},
+		nil,
+	))
 }

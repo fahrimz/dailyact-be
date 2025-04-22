@@ -3,14 +3,11 @@ package middleware
 import (
 	"dailyact/models"
 	"dailyact/types"
-	"fmt"
+	"dailyact/utils"
 	"net/http"
-	"os"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"gorm.io/gorm"
 )
 
@@ -36,13 +33,7 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 		}
 
 		tokenString := strings.Replace(authHeader, "Bearer ", "", 1)
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-			}
-			return []byte(os.Getenv("JWT_SECRET")), nil
-		})
-
+		claims, err := utils.ValidateJWT(tokenString)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, types.NewErrorResponse(
 				"UNAUTHORIZED",
@@ -52,39 +43,21 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 			return
 		}
 
-		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			// Check token expiry
-			if float64(time.Now().Unix()) > claims["exp"].(float64) {
-				c.AbortWithStatusJSON(http.StatusUnauthorized, types.NewErrorResponse(
-					"UNAUTHORIZED",
-					"Token expired",
-					"Please login again",
-				))
-				return
-			}
-
-			// Get user from database
-			var user models.User
-			if err := m.db.First(&user, claims["user_id"]).Error; err != nil {
-				c.AbortWithStatusJSON(http.StatusUnauthorized, types.NewErrorResponse(
-					"UNAUTHORIZED",
-					"User not found",
-					err.Error(),
-				))
-				return
-			}
-
-			// Set user in context
-			c.Set("user", user)
-			c.Next()
-		} else {
+		// Get user from database
+		var user models.User
+		if err := m.db.First(&user, claims.UserID).Error; err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, types.NewErrorResponse(
 				"UNAUTHORIZED",
-				"Invalid token",
-				"Token validation failed",
+				"User not found",
+				err.Error(),
 			))
+		
 			return
 		}
+
+		// Set user in context
+		c.Set("user", user)
+		c.Next()
 	}
 }
 
