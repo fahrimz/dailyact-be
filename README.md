@@ -46,7 +46,28 @@ A Go-based backend for a daily note-taking application with activity tracking an
 
 The server will start on port 8080.
 
+## Authentication
+
+This API uses Google OAuth2 for authentication. To use the API:
+
+1. Get the login URL: `GET /auth/google/login`
+2. Follow the URL to login with Google
+3. After successful login, you'll receive a JWT token
+4. Include the token in subsequent requests:
+   ```
+   Authorization: Bearer your_jwt_token
+   ```
+
+### User Roles
+- **User**: Can manage their own activities
+- **Admin**: Can manage all activities and categories
+
 ## API Endpoints
+
+### Auth
+- `GET /auth/google/login` - Get Google login URL
+- `GET /auth/google/callback` - Google OAuth callback
+- `GET /auth/me` - Get current user info 🔒
 
 ### Categories
 - `POST /categories` - Create a new category
@@ -56,14 +77,21 @@ The server will start on port 8080.
     - `page_size` (optional, default: 10, max: 100) - Number of items per page
 
 ### Activities
-- `POST /activities` - Create a new activity
-- `GET /activities` - List all activities
+- `POST /activities` - Create a new activity 🔒
+- `GET /activities` - List activities 🔒
+  - For admin: Lists all activities
+  - For users: Lists only their activities
   - Query parameters:
     - `page` (optional, default: 1) - Page number
     - `page_size` (optional, default: 10, max: 100) - Number of items per page
-- `GET /activities/:id` - Get a specific activity
-- `PUT /activities/:id` - Update an activity
-- `DELETE /activities/:id` - Delete an activity
+- `GET /activities/:id` - Get a specific activity 🔒👤
+- `PUT /activities/:id` - Update an activity 🔒👤
+- `DELETE /activities/:id` - Delete an activity 🔒👤
+
+Legend:
+- 🔒 Requires authentication
+- 👑 Requires admin role
+- 👤 Requires ownership or admin role
 
 ## Response Format
 

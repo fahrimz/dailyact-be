@@ -21,6 +21,8 @@ type Activity struct {
 	Notes       string    `json:"notes"`
 	CategoryID  uint      `json:"category_id" gorm:"not null"`
 	Category    Category  `json:"category" gorm:"foreignKey:CategoryID"`
+	UserID      uint      `json:"user_id" gorm:"not null"`
+	User        User      `json:"user" gorm:"foreignKey:UserID"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }

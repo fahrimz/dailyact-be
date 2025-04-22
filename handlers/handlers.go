@@ -86,6 +86,7 @@ func (h *Handler) GetCategories(c *gin.Context) {
 
 // Activity handlers
 func (h *Handler) CreateActivity(c *gin.Context) {
+	user, _ := c.Get("user")
 	var activity models.Activity
 	if err := c.ShouldBindJSON(&activity); err != nil {
 		c.JSON(http.StatusBadRequest, types.NewErrorResponse(
@@ -96,6 +97,7 @@ func (h *Handler) CreateActivity(c *gin.Context) {
 		return
 	}
 
+	activity.UserID = user.(models.User).ID
 	if err := h.db.Create(&activity).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
 			"DB_ERROR",
@@ -113,6 +115,7 @@ func (h *Handler) CreateActivity(c *gin.Context) {
 }
 
 func (h *Handler) GetActivities(c *gin.Context) {
+	user, _ := c.Get("user")
 	var query types.PaginationQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
 		c.JSON(http.StatusBadRequest, types.NewErrorResponse(
@@ -124,7 +127,13 @@ func (h *Handler) GetActivities(c *gin.Context) {
 	}
 
 	var total int64
-	if err := h.db.Model(&models.Activity{}).Count(&total).Error; err != nil {
+	db := h.db.Model(&models.Activity{})
+	// If not admin, only show user's activities
+	if user.(models.User).Role != models.RoleAdmin {
+		db = db.Where("user_id = ?", user.(models.User).ID)
+	}
+
+	if err := db.Count(&total).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
 			"DB_ERROR",
 			"Failed to count activities",
@@ -135,7 +144,13 @@ func (h *Handler) GetActivities(c *gin.Context) {
 
 	var activities []models.Activity
 	offset := (query.Page - 1) * query.PageSize
-	if err := h.db.Preload("Category").Offset(offset).Limit(query.PageSize).Find(&activities).Error; err != nil {
+	db = h.db.Preload("Category").Preload("User")
+	// If not admin, only show user's activities
+	if user.(models.User).Role != models.RoleAdmin {
+		db = db.Where("user_id = ?", user.(models.User).ID)
+	}
+
+	if err := db.Offset(offset).Limit(query.PageSize).Find(&activities).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
 			"DB_ERROR",
 			"Failed to fetch activities",
