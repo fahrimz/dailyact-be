@@ -2,10 +2,11 @@ package types
 
 // Response is the standard API response structure
 type Response struct {
-	Success bool        `json:"success"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
-	Error   *ErrorInfo  `json:"error,omitempty"`
+	Success    bool               `json:"success"`
+	Message    string             `json:"message"`
+	Data       interface{}        `json:"data,omitempty"`
+	Pagination *PaginationResponse `json:"pagination,omitempty"`
+	Error      *ErrorInfo         `json:"error,omitempty"`
 }
 
 // ErrorInfo contains detailed error information
@@ -16,11 +17,12 @@ type ErrorInfo struct {
 }
 
 // NewSuccessResponse creates a new success response
-func NewSuccessResponse(message string, data interface{}) Response {
+func NewSuccessResponse(message string, data interface{}, pagination *PaginationResponse) Response {
 	return Response{
-		Success: true,
-		Message: message,
-		Data:    data,
+		Success:    true,
+		Message:    message,
+		Data:       data,
+		Pagination: pagination,
 	}
 }
 

@@ -51,13 +51,50 @@ The server will start on port 8080.
 ### Categories
 - `POST /categories` - Create a new category
 - `GET /categories` - List all categories
+  - Query parameters:
+    - `page` (optional, default: 1) - Page number
+    - `page_size` (optional, default: 10, max: 100) - Number of items per page
 
 ### Activities
 - `POST /activities` - Create a new activity
 - `GET /activities` - List all activities
+  - Query parameters:
+    - `page` (optional, default: 1) - Page number
+    - `page_size` (optional, default: 10, max: 100) - Number of items per page
 - `GET /activities/:id` - Get a specific activity
 - `PUT /activities/:id` - Update an activity
 - `DELETE /activities/:id` - Delete an activity
+
+## Response Format
+
+### Success Response
+```json
+{
+  "success": true,
+  "message": "Operation successful message",
+  "data": { },
+  "pagination": {
+    "current_page": 1,
+    "page_size": 10,
+    "total_items": 50,
+    "total_pages": 5,
+    "has_more": true
+  }
+}
+```
+
+### Error Response
+```json
+{
+  "success": false,
+  "message": "Error message",
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Error message",
+    "detail": "Detailed error information"
+  }
+}
+```
 
 ## Data Models
 

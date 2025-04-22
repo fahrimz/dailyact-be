@@ -40,12 +40,34 @@ func (h *Handler) CreateCategory(c *gin.Context) {
 	c.JSON(http.StatusCreated, types.NewSuccessResponse(
 		"Category created successfully",
 		category,
+		nil,
 	))
 }
 
 func (h *Handler) GetCategories(c *gin.Context) {
+	var query types.PaginationQuery
+	if err := c.ShouldBindQuery(&query); err != nil {
+		c.JSON(http.StatusBadRequest, types.NewErrorResponse(
+			"INVALID_QUERY",
+			"Invalid pagination parameters",
+			err.Error(),
+		))
+		return
+	}
+
+	var total int64
+	if err := h.db.Model(&models.Category{}).Count(&total).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
+			"DB_ERROR",
+			"Failed to count categories",
+			err.Error(),
+		))
+		return
+	}
+
 	var categories []models.Category
-	if err := h.db.Find(&categories).Error; err != nil {
+	offset := (query.Page - 1) * query.PageSize
+	if err := h.db.Offset(offset).Limit(query.PageSize).Find(&categories).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
 			"DB_ERROR",
 			"Failed to fetch categories",
@@ -54,9 +76,11 @@ func (h *Handler) GetCategories(c *gin.Context) {
 		return
 	}
 
+	pagination := types.NewPaginationResponse(query.Page, query.PageSize, total)
 	c.JSON(http.StatusOK, types.NewSuccessResponse(
 		"Categories retrieved successfully",
 		categories,
+		&pagination,
 	))
 }
 
@@ -84,12 +108,34 @@ func (h *Handler) CreateActivity(c *gin.Context) {
 	c.JSON(http.StatusCreated, types.NewSuccessResponse(
 		"Activity created successfully",
 		activity,
+		nil,
 	))
 }
 
 func (h *Handler) GetActivities(c *gin.Context) {
+	var query types.PaginationQuery
+	if err := c.ShouldBindQuery(&query); err != nil {
+		c.JSON(http.StatusBadRequest, types.NewErrorResponse(
+			"INVALID_QUERY",
+			"Invalid pagination parameters",
+			err.Error(),
+		))
+		return
+	}
+
+	var total int64
+	if err := h.db.Model(&models.Activity{}).Count(&total).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
+			"DB_ERROR",
+			"Failed to count activities",
+			err.Error(),
+		))
+		return
+	}
+
 	var activities []models.Activity
-	if err := h.db.Preload("Category").Find(&activities).Error; err != nil {
+	offset := (query.Page - 1) * query.PageSize
+	if err := h.db.Preload("Category").Offset(offset).Limit(query.PageSize).Find(&activities).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
 			"DB_ERROR",
 			"Failed to fetch activities",
@@ -98,9 +144,11 @@ func (h *Handler) GetActivities(c *gin.Context) {
 		return
 	}
 
+	pagination := types.NewPaginationResponse(query.Page, query.PageSize, total)
 	c.JSON(http.StatusOK, types.NewSuccessResponse(
 		"Activities retrieved successfully",
 		activities,
+		&pagination,
 	))
 }
 
@@ -118,6 +166,7 @@ func (h *Handler) GetActivityByID(c *gin.Context) {
 	c.JSON(http.StatusOK, types.NewSuccessResponse(
 		"Activity retrieved successfully",
 		activity,
+		nil,
 	))
 }
 
@@ -156,6 +205,7 @@ func (h *Handler) UpdateActivity(c *gin.Context) {
 	c.JSON(http.StatusOK, types.NewSuccessResponse(
 		"Activity updated successfully",
 		activity,
+		nil,
 	))
 }
 
@@ -183,6 +233,7 @@ func (h *Handler) DeleteActivity(c *gin.Context) {
 
 	c.JSON(http.StatusOK, types.NewSuccessResponse(
 		"Activity deleted successfully",
+		nil,
 		nil,
 	))
 }
