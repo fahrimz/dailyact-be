@@ -25,8 +25,9 @@ func main() {
 	}
 
 	// Initialize handlers and middleware
-	h := handlers.NewHandler(db)
+	handler := handlers.NewHandler(db)
 	authHandler := handlers.NewAuthHandler(db)
+	userHandler := handlers.NewUserHandler(db)
 	authMiddleware := middleware.NewAuthMiddleware(db)
 
 	// Initialize router
@@ -40,19 +41,26 @@ func main() {
 		auth.GET("/me", authMiddleware.RequireAuth(), authHandler.GetMe)
 	}
 
+	// User management routes (admin only)
+	users := r.Group("/users", authMiddleware.RequireAuth(), authMiddleware.RequireAdmin())
+	{
+		users.GET("", userHandler.GetUsers)
+		users.GET("/:id", userHandler.GetUserByID)
+	}
+
 	// Category routes
-	r.POST("/categories", authMiddleware.RequireAuth(), authMiddleware.RequireAdmin(), h.CreateCategory)
-	r.GET("/categories", h.GetCategories)
+	r.POST("/categories", authMiddleware.RequireAuth(), authMiddleware.RequireAdmin(), handler.CreateCategory)
+	r.GET("/categories", handler.GetCategories)
 
 	// Activity routes
 	// Activities routes (protected)
 	activities := r.Group("/activities", authMiddleware.RequireAuth())
 	{
-		activities.POST("", h.CreateActivity)
-		activities.GET("", h.GetActivities)
-		activities.GET("/:id", authMiddleware.RequireOwnershipOrAdmin(), h.GetActivityByID)
-		activities.PUT("/:id", authMiddleware.RequireOwnershipOrAdmin(), h.UpdateActivity)
-		activities.DELETE("/:id", authMiddleware.RequireOwnershipOrAdmin(), h.DeleteActivity)
+		activities.POST("", handler.CreateActivity)
+		activities.GET("", handler.GetActivities)
+		activities.GET("/:id", authMiddleware.RequireOwnershipOrAdmin(), handler.GetActivityByID)
+		activities.PUT("/:id", authMiddleware.RequireOwnershipOrAdmin(), handler.UpdateActivity)
+		activities.DELETE("/:id", authMiddleware.RequireOwnershipOrAdmin(), handler.DeleteActivity)
 	}
 
 	// Start server

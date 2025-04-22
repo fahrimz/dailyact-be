@@ -69,6 +69,13 @@ This API uses Google OAuth2 for authentication. To use the API:
 - `GET /auth/google/callback` - Google OAuth callback
 - `GET /auth/me` - Get current user info 🔒
 
+### Users
+- `GET /users` - List all users 🔒👑
+  - Query parameters:
+    - `page` (optional, default: 1) - Page number
+    - `page_size` (optional, default: 10, max: 100) - Number of items per page
+- `GET /users/:id` - Get user details with their activities 🔒👑
+
 ### Categories
 - `POST /categories` - Create a new category
 - `GET /categories` - List all categories
