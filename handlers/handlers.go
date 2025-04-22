@@ -84,6 +84,98 @@ func (h *Handler) GetCategories(c *gin.Context) {
 	))
 }
 
+func (h *Handler) UpdateCategory(c *gin.Context) {
+	id := c.Param("id")
+	var category models.Category
+
+	// Check if category exists
+	if err := h.db.First(&category, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, types.NewErrorResponse(
+			"NOT_FOUND",
+			"Category not found",
+			err.Error(),
+		))
+		return
+	}
+
+	// Bind update data
+	if err := c.ShouldBindJSON(&category); err != nil {
+		c.JSON(http.StatusBadRequest, types.NewErrorResponse(
+			"INVALID_INPUT",
+			"Invalid input data",
+			err.Error(),
+		))
+		return
+	}
+
+	// Update category
+	if err := h.db.Save(&category).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
+			"DB_ERROR",
+			"Failed to update category",
+			err.Error(),
+		))
+		return
+	}
+
+	c.JSON(http.StatusOK, types.NewSuccessResponse(
+		"Category updated successfully",
+		category,
+		nil,
+	))
+}
+
+func (h *Handler) DeleteCategory(c *gin.Context) {
+	id := c.Param("id")
+	var category models.Category
+
+	// Check if category exists
+	if err := h.db.First(&category, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, types.NewErrorResponse(
+			"NOT_FOUND",
+			"Category not found",
+			err.Error(),
+		))
+		return
+	}
+
+	// Check if category is being used by any activities
+	var activityCount int64
+	if err := h.db.Model(&models.Activity{}).Where("category_id = ?", id).Count(&activityCount).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
+			"DB_ERROR",
+			"Failed to check category usage",
+			err.Error(),
+		))
+		return
+	}
+
+	if activityCount > 0 {
+		c.JSON(http.StatusBadRequest, types.NewErrorResponse(
+			"CATEGORY_IN_USE",
+			"Cannot delete category that is being used by activities",
+			"Category is being used by activities",
+		))
+		return
+	}
+
+	// Delete category
+	if err := h.db.Delete(&category).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
+			"DB_ERROR",
+			"Failed to delete category",
+			err.Error(),
+		))
+		return
+	}
+
+	c.JSON(http.StatusOK, types.NewSuccessResponse(
+		"Category deleted successfully",
+		nil,
+		nil,
+	))
+}
+
 // Activity handlers
 func (h *Handler) CreateActivity(c *gin.Context) {
 	user, _ := c.Get("user")

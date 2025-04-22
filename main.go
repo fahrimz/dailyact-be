@@ -57,8 +57,13 @@ func main() {
 	}
 
 	// Category routes
-	r.POST("/categories", authMiddleware.RequireAuth(), authMiddleware.RequireAdmin(), handler.CreateCategory)
-	r.GET("/categories", handler.GetCategories)
+	categories := r.Group("/categories")
+	{
+		categories.GET("", handler.GetCategories)
+		categories.POST("", authMiddleware.RequireAuth(), authMiddleware.RequireAdmin(), handler.CreateCategory)
+		categories.PUT("/:id", authMiddleware.RequireAuth(), authMiddleware.RequireAdmin(), handler.UpdateCategory)
+		categories.DELETE("/:id", authMiddleware.RequireAuth(), authMiddleware.RequireAdmin(), handler.DeleteCategory)
+	}
 
 	// Activity routes
 	// Activities routes (protected)
