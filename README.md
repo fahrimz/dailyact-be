@@ -84,7 +84,31 @@ Here's how the authentication works in a complete frontend + backend setup:
 3. **Mobile SDK Integration**
    - iOS: Use Google Sign-In SDK
    - Android: Use Google Sign-In SDK
-   - Send obtained token to backend for verification
+   - Send obtained ID token to backend for verification:
+     ```http
+     POST /auth/google/verify
+     Content-Type: application/json
+
+     {
+       "id_token": "eyJhbGciOiJSUzI1..."
+     }
+
+     Response:
+     {
+       "success": true,
+       "message": "Login successful",
+       "data": {
+         "token": "your.jwt.token",
+         "user": {
+           "id": 1,
+           "email": "user@example.com",
+           "name": "John Doe",
+           "picture": "https://...",
+           "role": "user"
+         }
+       }
+     }
+     ```
 
 #### Backend Flow
 
@@ -169,32 +193,70 @@ const GoogleCallback = () => {
 };
 ```
 
-2. **Mobile Implementation (React Native)**
+2. **Mobile Implementation (React Native with Google Sign-In)**
 ```javascript
-import * as WebBrowser from 'expo-web-browser';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+
+// Initialize Google Sign-In in your App.js or similar
+GoogleSignin.configure({
+  webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+  iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',
+});
 
 const handleGoogleLogin = async () => {
   try {
-    // Get login URL from backend
-    const response = await axios.get('/auth/google/login');
-    const { url } = response.data.data;
-
-    // Open URL in system browser
-    const result = await WebBrowser.openAuthSessionAsync(
-      url,
-      'yourapp://callback'
-    );
-
-    if (result.type === 'success') {
-      // Extract token from URL
-      const { token, user } = parseCallbackUrl(result.url);
-      
-      // Store authentication state
-      await SecureStore.setItemAsync('token', token);
-      setUser(user);
-    }
+    // Start Google Sign-In flow
+    await GoogleSignin.hasPlayServices();
+    await GoogleSignin.signIn();
+    
+    // Get ID token
+    const { idToken } = await GoogleSignin.getTokens();
+    
+    // Verify token with backend
+    const response = await axios.post('/auth/google/verify', {
+      id_token: idToken
+    });
+    
+    const { token, user } = response.data.data;
+    
+    // Store JWT securely
+    await SecureStore.setItemAsync('token', token);
+    
+    // Set default auth header
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    
+    // Update app state
+    setUser(user);
+    navigation.replace('Home');
+    
   } catch (error) {
-    console.error('Login failed:', error);
+    if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+      console.log('User cancelled login flow');
+    } else if (error.code === statusCodes.IN_PROGRESS) {
+      console.log('Sign in is in progress');
+    } else {
+      console.error('Login failed:', error);
+    }
+  }
+};
+
+// Logout function
+const handleLogout = async () => {
+  try {
+    // Sign out from Google
+    await GoogleSignin.signOut();
+    
+    // Clear stored token
+    await SecureStore.deleteItemAsync('token');
+    
+    // Clear auth header
+    delete axios.defaults.headers.common['Authorization'];
+    
+    // Update app state
+    setUser(null);
+    navigation.replace('Login');
+  } catch (error) {
+    console.error('Logout failed:', error);
   }
 };
 ```

@@ -28,6 +28,7 @@ func main() {
 	handler := handlers.NewHandler(db)
 	authHandler := handlers.NewAuthHandler(db)
 	userHandler := handlers.NewUserHandler(db)
+	mobileAuthHandler := handlers.NewMobileAuthHandler(db)
 	authMiddleware := middleware.NewAuthMiddleware(db)
 
 	// Initialize router
@@ -39,6 +40,9 @@ func main() {
 		auth.GET("/google/login", authHandler.GoogleLogin)
 		auth.GET("/google/callback", authHandler.GoogleCallback)
 		auth.GET("/me", authMiddleware.RequireAuth(), authHandler.GetMe)
+		
+		// Mobile auth routes
+		auth.POST("/google/verify", mobileAuthHandler.VerifyGoogleToken)
 	}
 
 	// User management routes (admin only)
