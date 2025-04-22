@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    container_name: windsurf_db
+    environment:
+      POSTGRES_DB: dailyact
+      POSTGRES_USER: windsurf_user
+      POSTGRES_PASSWORD: windsurf_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U windsurf_user -d dailyact"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

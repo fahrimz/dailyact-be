@@ -1,0 +1,26 @@
+package models
+
+import "time"
+
+type Category struct {
+	ID          uint      `json:"id" gorm:"primaryKey"`
+	Name        string    `json:"name" gorm:"not null;unique"`
+	Description string    `json:"description"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Activities  []Activity `json:"activities,omitempty" gorm:"foreignKey:CategoryID"`
+}
+
+type Activity struct {
+	ID          uint      `json:"id" gorm:"primaryKey"`
+	Date        time.Time `json:"date" gorm:"not null;index"`
+	StartTime   time.Time `json:"start_time" gorm:"not null"`
+	EndTime     time.Time `json:"end_time" gorm:"not null"`
+	Duration    int       `json:"duration" gorm:"not null"` // in minutes
+	Description string    `json:"description" gorm:"not null"`
+	Notes       string    `json:"notes"`
+	CategoryID  uint      `json:"category_id" gorm:"not null"`
+	Category    Category  `json:"category" gorm:"foreignKey:CategoryID"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
