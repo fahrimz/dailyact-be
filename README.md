@@ -48,14 +48,214 @@ The server will start on port 8080.
 
 ## Authentication
 
-This API uses Google OAuth2 for authentication. To use the API:
+This API uses Google OAuth2 for authentication.
 
-1. Get the login URL: `GET /auth/google/login`
-2. Follow the URL to login with Google
-3. After successful login, you'll receive a JWT token
-4. Include the token in subsequent requests:
+### Complete Login Flow with Frontend
+
+Here's how the authentication works in a complete frontend + backend setup:
+
+#### Frontend Implementation Options
+
+1. **Browser Redirect (Recommended for Web & Mobile)**
+   ```javascript
+   const handleGoogleLogin = async () => {
+     // 1. Get login URL from backend
+     const response = await axios.get('/auth/google/login');
+     const { url } = response.data.data;
+
+     // 2. Redirect to Google login
+     window.location.href = url;
+     // For mobile apps: use in-app browser or system browser
+     // iOS: ASWebAuthenticationSession
+     // Android: Chrome Custom Tabs
+   };
    ```
-   Authorization: Bearer your_jwt_token
+
+2. **Popup Window (Web Only)**
+   ```javascript
+   const handleGoogleLoginPopup = async () => {
+     const response = await axios.get('/auth/google/login');
+     const { url } = response.data.data;
+
+     window.open(url, 'Google Login', 'width=500,height=600');
+   };
+   ```
+
+3. **Mobile SDK Integration**
+   - iOS: Use Google Sign-In SDK
+   - Android: Use Google Sign-In SDK
+   - Send obtained token to backend for verification
+
+#### Backend Flow
+
+1. **Initial Login Request**
+   - Frontend application sends GET request to `/auth/google/login`
+   - Backend API generates a Google OAuth URL with required scopes (email, profile)
+   - Backend API returns the URL to the frontend
+
+2. **Google Authentication**
+   - Browser redirects to the Google login page
+   - User enters their Google credentials
+   - Google validates the credentials
+   - If valid, Google asks user to consent to sharing their information
+
+3. **OAuth Callback**
+   - After user consent, Google redirects browser back to `/auth/google/callback`
+   - Authorization code is included in the redirect URL
+   - Backend API exchanges this code with Google for an access token
+   - Backend API uses the access token to fetch user's information (email, name, picture)
+
+4. **User Creation/Update**
+   - Backend API checks if a user with the Google ID exists in database
+   - If not found: creates new user with 'user' role
+   - If found: updates last login timestamp
+   - Stores user's email, name, and profile picture
+
+5. **JWT Generation**
+   - Backend API generates a JWT token containing:
+     - User ID
+     - Email
+     - Role (user/admin)
+     - Expiration time (24 hours)
+   - Token is signed with backend's secret key
+
+6. **Response & Frontend Integration**
+   - Backend returns JWT token and user information
+   - Frontend stores token in localStorage/secure cookie
+   - Frontend updates UI to show user is logged in
+   - Frontend includes token in all subsequent API requests:
+     ```javascript
+     // Example using axios
+     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+     ```
+
+#### Implementation Examples
+
+1. **Web Implementation (React)**
+```javascript
+// Using redirect approach
+const handleGoogleLogin = async () => {
+  try {
+    // Store the return URL for after login
+    localStorage.setItem('returnTo', window.location.pathname);
+    
+    // Get login URL and redirect
+    const response = await axios.get('/auth/google/login');
+    window.location.href = response.data.data.url;
+  } catch (error) {
+    console.error('Login failed:', error);
+  }
+};
+
+// Handle callback in your callback route component
+const GoogleCallback = () => {
+  useEffect(() => {
+    const handleCallback = async () => {
+      // Get token from URL params (handled by backend)
+      const { token, user } = await getCurrentUser();
+      
+      // Store authentication state
+      setAuthState({ token, user });
+      
+      // Redirect back to original page
+      const returnTo = localStorage.getItem('returnTo') || '/dashboard';
+      navigate(returnTo);
+    };
+    
+    handleCallback();
+  }, []);
+  
+  return <LoadingSpinner />;
+};
+```
+
+2. **Mobile Implementation (React Native)**
+```javascript
+import * as WebBrowser from 'expo-web-browser';
+
+const handleGoogleLogin = async () => {
+  try {
+    // Get login URL from backend
+    const response = await axios.get('/auth/google/login');
+    const { url } = response.data.data;
+
+    // Open URL in system browser
+    const result = await WebBrowser.openAuthSessionAsync(
+      url,
+      'yourapp://callback'
+    );
+
+    if (result.type === 'success') {
+      // Extract token from URL
+      const { token, user } = parseCallbackUrl(result.url);
+      
+      // Store authentication state
+      await SecureStore.setItemAsync('token', token);
+      setUser(user);
+    }
+  } catch (error) {
+    console.error('Login failed:', error);
+  }
+};
+```
+
+#### Security Considerations
+1. **Token Storage**
+   - Store JWT in httpOnly cookies for better security
+   - Clear token on logout/expiration
+
+2. **CORS Configuration**
+   - Backend must allow requests from frontend domain
+   - Properly configure allowed origins
+
+3. **Error Handling**
+   - Handle token expiration gracefully
+   - Implement refresh token mechanism if needed
+   - Show appropriate error messages to users
+
+### Authentication Flow Example
+
+1. Get the login URL:
+   ```http
+   GET /auth/google/login
+
+   Response:
+   {
+     "success": true,
+     "message": "Login URL generated",
+     "data": {
+       "url": "https://accounts.google.com/o/oauth2/v2/auth?...."
+     }
+   }
+   ```
+
+2. After following the URL and logging in with Google, you'll be redirected to the callback URL with a success response:
+   ```http
+   GET /auth/google/callback?code=.....
+
+   Response:
+   {
+     "success": true,
+     "message": "Login successful",
+     "data": {
+       "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9....",
+       "user": {
+         "id": 1,
+         "email": "user@example.com",
+         "name": "John Doe",
+         "picture": "https://....",
+         "role": "user",
+         "created_at": "2025-04-22T02:11:45Z",
+         "last_login_at": "2025-04-22T02:11:45Z"
+       }
+     }
+   }
+   ```
+
+3. Use the JWT token in subsequent requests:
+   ```http
+   GET /activities
+   Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9....
    ```
 
 ### User Roles
