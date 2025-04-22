@@ -45,10 +45,11 @@ func main() {
 	r.GET("/categories", h.GetCategories)
 
 	// Activity routes
+	// Activities routes (protected)
 	activities := r.Group("/activities", authMiddleware.RequireAuth())
 	{
-		activities.POST("/", h.CreateActivity)
-		activities.GET("/", h.GetActivities)
+		activities.POST("", h.CreateActivity)
+		activities.GET("", h.GetActivities)
 		activities.GET("/:id", authMiddleware.RequireOwnershipOrAdmin(), h.GetActivityByID)
 		activities.PUT("/:id", authMiddleware.RequireOwnershipOrAdmin(), h.UpdateActivity)
 		activities.DELETE("/:id", authMiddleware.RequireOwnershipOrAdmin(), h.DeleteActivity)
