@@ -34,12 +34,16 @@ func main() {
 	// Initialize router
 	r := gin.Default()
 
+	// Add CORS middleware
+	r.Use(middleware.CORSMiddleware())
+
 	// Auth routes
 	auth := r.Group("/auth")
 	{
 		auth.GET("/google/login", authHandler.GoogleLogin)
 		auth.GET("/google/callback", authHandler.GoogleCallback)
 		auth.GET("/me", authMiddleware.RequireAuth(), authHandler.GetMe)
+		auth.POST("/logout", authMiddleware.RequireAuth(), authHandler.Logout)
 		
 		// Mobile auth routes
 		auth.POST("/google/verify", mobileAuthHandler.VerifyGoogleToken)

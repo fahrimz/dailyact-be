@@ -152,19 +152,33 @@ func (h *AuthHandler) GoogleCallback(c *gin.Context) {
 }
 
 func (h *AuthHandler) GetMe(c *gin.Context) {
-	user, exists := c.Get("user")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, types.NewErrorResponse(
-			"UNAUTHORIZED",
-			"User not found in context",
-			"Please login again",
+	user := c.MustGet("user")
+	c.JSON(http.StatusOK, types.NewSuccessResponse(
+		"User fetched successfully",
+		user,
+		nil,
+	))
+}
+
+func (h *AuthHandler) Logout(c *gin.Context) {
+	// Get current user from context
+	user := c.MustGet("user").(models.User)
+
+	// Update last_login_at to mark the session end
+	if err := h.db.Model(&user).Updates(map[string]interface{}{
+		"last_login_at": time.Now(),
+	}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
+			"DB_ERROR",
+			"Failed to update user last login time",
+			err.Error(),
 		))
 		return
 	}
 
 	c.JSON(http.StatusOK, types.NewSuccessResponse(
-		"User retrieved successfully",
-		user,
+		"Logged out successfully",
+		nil,
 		nil,
 	))
 }
