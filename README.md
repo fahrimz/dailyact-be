@@ -409,7 +409,7 @@ Legend:
   "date": "2025-04-22T00:00:00Z",
   "start_time": "2025-04-22T09:00:00Z",
   "end_time": "2025-04-22T10:30:00Z",
-  "duration": 90,
+  "duration": 3600,
   "description": "Team meeting",
   "notes": "Discussed project timeline",
   "category_id": 1
