@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"time"
 	"net/http"
 	"dailyact/models"
 	"dailyact/types"
@@ -209,6 +210,9 @@ func (h *Handler) CreateActivity(c *gin.Context) {
 func (h *Handler) GetActivities(c *gin.Context) {
 	user, _ := c.Get("user")
 	var query types.PaginationQuery
+	var filter types.ActivityFilter
+
+	// Bind pagination query
 	if err := c.ShouldBindQuery(&query); err != nil {
 		c.JSON(http.StatusBadRequest, types.NewErrorResponse(
 			"INVALID_QUERY",
@@ -218,13 +222,33 @@ func (h *Handler) GetActivities(c *gin.Context) {
 		return
 	}
 
-	var total int64
-	db := h.db.Model(&models.Activity{})
+	// Start building base query
+	db := h.db.Model(&models.Activity{}).Preload("Category").Preload("User")
+
 	// If not admin, only show user's activities
 	if user.(models.User).Role != models.RoleAdmin {
 		db = db.Where("user_id = ?", user.(models.User).ID)
 	}
 
+	// Bind and apply filters
+	if err := c.ShouldBindQuery(&filter); err == nil {
+		if filter.CategoryID != nil {
+			db = db.Where("category_id = ?", *filter.CategoryID)
+		}
+		if filter.StartDate != nil {
+			if start, err := time.Parse("2006-01-02", *filter.StartDate); err == nil {
+				db = db.Where("date >= ?", start)
+			}
+		}
+		if filter.EndDate != nil {
+			if end, err := time.Parse("2006-01-02", *filter.EndDate); err == nil {
+				db = db.Where("date <= ?", end)
+			}
+		}
+	}
+
+	// Count total items with applied filters
+	var total int64
 	if err := db.Count(&total).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
 			"DB_ERROR",
@@ -234,14 +258,9 @@ func (h *Handler) GetActivities(c *gin.Context) {
 		return
 	}
 
+	// Fetch paginated activities
 	var activities []models.Activity
 	offset := (query.Page - 1) * query.PageSize
-	db = h.db.Preload("Category").Preload("User")
-	// If not admin, only show user's activities
-	if user.(models.User).Role != models.RoleAdmin {
-		db = db.Where("user_id = ?", user.(models.User).ID)
-	}
-
 	if err := db.Offset(offset).Limit(query.PageSize).Find(&activities).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
 			"DB_ERROR",
@@ -251,6 +270,7 @@ func (h *Handler) GetActivities(c *gin.Context) {
 		return
 	}
 
+	// Prepare pagination response
 	pagination := types.NewPaginationResponse(query.Page, query.PageSize, total)
 	c.JSON(http.StatusOK, types.NewSuccessResponse(
 		"Activities retrieved successfully",
