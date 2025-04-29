@@ -224,11 +224,7 @@ func (h *Handler) GetActivities(c *gin.Context) {
 
 	// Start building base query
 	db := h.db.Model(&models.Activity{}).Preload("Category").Preload("User")
-
-	// If not admin, only show user's activities
-	if user.(models.User).Role != models.RoleAdmin {
-		db = db.Where("user_id = ?", user.(models.User).ID)
-	}
+	db = db.Where("user_id = ?", user.(models.User).ID)
 
 	// Bind and apply filters
 	if err := c.ShouldBindQuery(&filter); err == nil {
