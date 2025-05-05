@@ -5,9 +5,10 @@ import (
 	"dailyact/handlers"
 	"dailyact/middleware"
 	"dailyact/seeds"
+	"log"
+
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"log"
 )
 
 func main() {
@@ -44,13 +45,13 @@ func main() {
 		auth.GET("/google/callback", authHandler.GoogleCallback)
 		auth.GET("/me", authMiddleware.RequireAuth(), authHandler.GetMe)
 		auth.POST("/logout", authMiddleware.RequireAuth(), authHandler.Logout)
-		
+
 		// Mobile auth routes
 		auth.POST("/google/verify", mobileAuthHandler.VerifyGoogleToken)
 	}
 
 	// User management routes (admin only)
-	users := r.Group("/users", authMiddleware.RequireAuth(), authMiddleware.RequireAdmin())
+	users := r.Group("/users", authMiddleware.RequireAuth(), authMiddleware.RequireSuperAdmin())
 	{
 		users.GET("", userHandler.GetUsers)
 		users.GET("/:id", userHandler.GetUserByID)

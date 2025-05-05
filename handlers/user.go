@@ -33,25 +33,6 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 		return
 	}
 
-	user, exists := c.Get("user")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, types.NewErrorResponse(
-			"UNAUTHORIZED",
-			"User not found in context",
-			"Please login again",
-		))
-		return
-	}
-
-	if user.(models.User).Role != models.RoleAdmin && user.(models.User).Role != models.RoleSuperAdmin {
-		c.JSON(http.StatusForbidden, types.NewErrorResponse(
-			"FORBIDDEN",
-			"Only admin and superadmin can access this endpoint",
-			"You don't have permission to access this resource",
-		))
-		return
-	}
-
 	var total int64
 	db := h.db.Model(&models.User{})
 	if query.Name != "" {

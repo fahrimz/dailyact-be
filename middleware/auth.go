@@ -51,7 +51,7 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 				"User not found",
 				err.Error(),
 			))
-		
+
 			return
 		}
 
@@ -73,10 +73,35 @@ func (m *AuthMiddleware) RequireAdmin() gin.HandlerFunc {
 			return
 		}
 
-		if user.(models.User).Role != models.RoleAdmin {
+		if user.(models.User).Role != models.RoleAdmin && user.(models.User).Role != models.RoleSuperAdmin {
 			c.AbortWithStatusJSON(http.StatusForbidden, types.NewErrorResponse(
 				"FORBIDDEN",
 				"Admin access required",
+				"You don't have permission to access this resource",
+			))
+			return
+		}
+
+		c.Next()
+	}
+}
+
+func (m *AuthMiddleware) RequireSuperAdmin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user, exists := c.Get("user")
+		if !exists {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, types.NewErrorResponse(
+				"UNAUTHORIZED",
+				"User not found in context",
+				"Please login again",
+			))
+			return
+		}
+
+		if user.(models.User).Role != models.RoleSuperAdmin {
+			c.AbortWithStatusJSON(http.StatusForbidden, types.NewErrorResponse(
+				"FORBIDDEN",
+				"Super admin access required",
 				"You don't have permission to access this resource",
 			))
 			return
