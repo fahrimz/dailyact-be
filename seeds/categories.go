@@ -2,8 +2,9 @@ package seeds
 
 import (
 	"dailyact/models"
-	"gorm.io/gorm"
 	"log"
+
+	"gorm.io/gorm"
 )
 
 func SeedCategories(db *gorm.DB) error {
@@ -22,6 +23,10 @@ func SeedCategories(db *gorm.DB) error {
 		{
 			Name:        "Sleep",
 			Description: "Sleep and rest activities",
+		},
+		{
+			Name:        "Hygiene",
+			Description: "Personal hygiene and self-care activities",
 		},
 		{
 			Name:        "Fitness",
