@@ -1,10 +1,11 @@
 package handlers
 
 import (
-	"time"
-	"net/http"
 	"dailyact/models"
 	"dailyact/types"
+	"net/http"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -254,10 +255,10 @@ func (h *Handler) GetActivities(c *gin.Context) {
 		return
 	}
 
-	// Fetch paginated activities
+	// Fetch paginated activities, sorted by created_at desc (newest first)
 	var activities []models.Activity
 	offset := (query.Page - 1) * query.PageSize
-	if err := db.Offset(offset).Limit(query.PageSize).Find(&activities).Error; err != nil {
+	if err := db.Order("created_at DESC").Offset(offset).Limit(query.PageSize).Find(&activities).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
 			"DB_ERROR",
 			"Failed to fetch activities",
