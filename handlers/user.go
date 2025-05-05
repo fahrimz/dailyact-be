@@ -55,7 +55,7 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 	var total int64
 	db := h.db.Model(&models.User{})
 	if query.Name != "" {
-		db = db.Where("LOWER(name) LIKE ?", "%"+strings.ToLower(query.Name)+"%")
+		db = db.Where("LOWER(name) LIKE ? OR LOWER(email) LIKE ?", "%"+strings.ToLower(query.Name)+"%", "%"+strings.ToLower(query.Name)+"%")
 	}
 	if err := db.Count(&total).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
