@@ -3,15 +3,16 @@ package models
 import (
 	"errors"
 	"time"
+
 	"gorm.io/gorm"
 )
 
 type Category struct {
-	ID          uint      `json:"id" gorm:"primaryKey"`
-	Name        string    `json:"name" gorm:"not null;unique"`
-	Description string    `json:"description"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          uint       `json:"id" gorm:"primaryKey"`
+	Name        string     `json:"name" gorm:"not null;unique"`
+	Description string     `json:"description"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 	Activities  []Activity `json:"activities,omitempty" gorm:"foreignKey:CategoryID"`
 }
 
