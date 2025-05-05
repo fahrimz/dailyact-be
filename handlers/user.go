@@ -4,6 +4,7 @@ import (
 	"dailyact/models"
 	"dailyact/types"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -19,7 +20,10 @@ func NewUserHandler(db *gorm.DB) *UserHandler {
 
 // GetUsers returns a paginated list of users (admin only)
 func (h *UserHandler) GetUsers(c *gin.Context) {
-	var query types.PaginationQuery
+	var query struct {
+		types.PaginationQuery
+		Name string `form:"name"`
+	}
 	if err := c.ShouldBindQuery(&query); err != nil {
 		c.JSON(http.StatusBadRequest, types.NewErrorResponse(
 			"INVALID_QUERY",
@@ -49,7 +53,11 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 	}
 
 	var total int64
-	if err := h.db.Model(&models.User{}).Count(&total).Error; err != nil {
+	db := h.db.Model(&models.User{})
+	if query.Name != "" {
+		db = db.Where("LOWER(name) LIKE ?", "%"+strings.ToLower(query.Name)+"%")
+	}
+	if err := db.Count(&total).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
 			"DB_ERROR",
 			"Failed to count users",
@@ -60,7 +68,7 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 
 	var users []models.User
 	offset := (query.Page - 1) * query.PageSize
-	if err := h.db.Offset(offset).Limit(query.PageSize).Find(&users).Error; err != nil {
+	if err := db.Offset(offset).Limit(query.PageSize).Find(&users).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
 			"DB_ERROR",
 			"Failed to fetch users",
