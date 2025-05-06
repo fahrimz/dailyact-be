@@ -15,10 +15,8 @@ import (
 func main() {
 	// Load environment variables
 	// Check if in development environment - load .env file only in dev mode
-	if gin.Mode() == gin.DebugMode {
-		if err := godotenv.Load(); err != nil {
-			log.Fatal("Error loading .env file")
-		}
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading .env file")
 	}
 
 	// Initialize database
