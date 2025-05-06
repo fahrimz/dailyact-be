@@ -1,7 +1,4 @@
-# This workflow will build a golang project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
-
-name: Go
+name: Build and deploy to VPS
 
 on:
   push:
@@ -21,8 +18,77 @@ jobs:
       with:
         go-version: '1.23'
 
-    - name: Build
-      run: go build -v ./...
+    - name: Setup env
+      run: |
+        echo "DB_HOST=${{ vars.DB_HOST }}" >> .env
+        echo "DB_PORT=${{ vars.DB_PORT }}" >> .env
+        echo "DB_USER=${{ vars.DB_USER }}" >> .env
+        echo "DB_PASSWORD=${{ vars.DB_PASSWORD }}" >> .env
+        echo "DB_NAME=${{ vars.DB_NAME }}" >> .env
+        echo "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" >> .env
+        echo "GOOGLE_CLIENT_SECRET=${{ vars.GOOGLE_CLIENT_SECRET }}" >> .env
+        echo "GOOGLE_REDIRECT_URL=${{ vars.GOOGLE_REDIRECT_URL }}" >> .env
+        echo "JWT_SECRET=${{ vars.JWT_SECRET }}" >> .env
 
-    - name: Test
-      run: go test -v ./...
+    - name: Build
+      run: go build -o dailyact_be/main -v ./...
+    
+    - name: Copy files to build
+      run: |
+        cp .env dailyact_be/.env
+
+    - name: Zip build
+      run: |
+        zip -rq dailyact_be.zip dailyact_be
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: buildfolder
+        path: dailyact_be.zip
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    
+    env:
+      KILATSEDAP_USER: ${{ secrets.KILATSEDAP_USER }}
+      KILATSEDAP_SERVER: ${{ secrets.KILATSEDAP_SERVER }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    steps:
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/kilatsedap.pem
+          chmod 600 ~/.ssh/kilatsedap.pem
+          ssh-keyscan -H -t rsa ${{ secrets.KILATSEDAP_SERVER }} >> ~/.ssh/known_hosts
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: buildfolder
+          path: buildfolder
+
+      - name: Copy file via scp
+        run: scp -i ~/.ssh/kilatsedap.pem -o StrictHostKeyChecking=no buildfolder/dailyact_be.zip ${{ secrets.KILATSEDAP_USER }}@${{ secrets.KILATSEDAP_SERVER }}:~/.
+
+      - name: Check if dailyact_be.zip exists
+        run: |
+          if [ ! -f "buildfolder/dailyact_be.zip" ]; then
+            echo "dailyact_be.zip not found, exiting."
+            exit 1
+          fi
+
+      - name: Backup existing dailyact_be folder
+        run: |
+          TIMESTAMP=$(date +"%Y-%m-%d-%H:%M")
+          BACKUP_FOLDER="dailyact_be_$TIMESTAMP"
+          ssh -i ~/.ssh/kilatsedap.pem -o StrictHostKeyChecking=no ${{ secrets.KILATSEDAP_USER }}@${{ secrets.KILATSEDAP_SERVER }} "if [ -d ~/mezza9 ]; then mv ~/dailyact_be ~/$BACKUP_FOLDER; fi"
+
+      - name: Unzip dailyact_be.zip
+        run: |
+          ssh -i ~/.ssh/kilatsedap.pem -o StrictHostKeyChecking=no ${{ secrets.KILATSEDAP_USER }}@${{ secrets.KILATSEDAP_SERVER }} << 'EOF'
+            unzip -o ~/dailyact_be.zip -d ~/
+          EOF
+
+      - name: Clean up temporary files
+        run: rm buildfolder/dailyact_be.zip
