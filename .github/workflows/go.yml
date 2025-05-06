@@ -10,6 +10,10 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+
+    env:
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+
     steps:
     - uses: actions/checkout@v4
 
@@ -26,12 +30,12 @@ jobs:
         echo "DB_PASSWORD=${{ vars.DB_PASSWORD }}" >> .env
         echo "DB_NAME=${{ vars.DB_NAME }}" >> .env
         echo "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" >> .env
-        echo "GOOGLE_CLIENT_SECRET=${{ vars.GOOGLE_CLIENT_SECRET }}" >> .env
+        echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
         echo "GOOGLE_REDIRECT_URL=${{ vars.GOOGLE_REDIRECT_URL }}" >> .env
         echo "JWT_SECRET=${{ vars.JWT_SECRET }}" >> .env
 
     - name: Build
-      run: go build -v ./...
+      run: env GOOS=linux GOARCH=amd64 go build -v ./...
     
     - name: Copy files to build
       run: |
