@@ -31,11 +31,13 @@ jobs:
         echo "JWT_SECRET=${{ vars.JWT_SECRET }}" >> .env
 
     - name: Build
-      run: go build -o dailyact_be/main -v ./...
+      run: go build -v ./...
     
     - name: Copy files to build
       run: |
+        mkdir -p dailyact_be
         cp .env dailyact_be/.env
+        cp dailyact ./dailyact_be/dailyact
 
     - name: Zip build
       run: |
