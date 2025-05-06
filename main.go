@@ -77,6 +77,13 @@ func main() {
 		activities.DELETE("/:id", authMiddleware.RequireOwnershipOrAdmin(), handler.DeleteActivity)
 	}
 
+	// App feedback routes
+	appFeedback := r.Group("/app_feedbacks", authMiddleware.RequireAuth())
+	{
+		appFeedback.POST("", handler.CreateAppFeedback)
+		appFeedback.GET("", authMiddleware.RequireSuperAdmin(), handler.GetAppFeedbacks)
+	}
+
 	// Start server
 	r.Run(":8080")
 }

@@ -361,3 +361,82 @@ func (h *Handler) DeleteActivity(c *gin.Context) {
 		nil,
 	))
 }
+
+func (h *Handler) CreateAppFeedback(c *gin.Context) {
+	var feedback models.AppFeedback
+	if err := c.ShouldBindJSON(&feedback); err != nil {
+		c.JSON(http.StatusBadRequest, types.NewErrorResponse(
+			"INVALID_INPUT",
+			"Invalid input data",
+			err.Error(),
+		))
+		return
+	}
+
+	user := c.MustGet("user")
+	feedback.UserID = user.(models.User).ID
+	feedback.CreatedAt = time.Now()
+
+	if err := h.db.Create(&feedback).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
+			"DB_ERROR",
+			"Failed to create feedback",
+			err.Error(),
+		))
+		return
+	}
+
+	c.JSON(http.StatusCreated, types.NewSuccessResponse(
+		"Feedback created successfully",
+		nil,
+		nil,
+	))
+}
+
+func (h *Handler) GetAppFeedbacks(c *gin.Context) {
+	var query types.PaginationQuery
+
+	// Bind pagination query
+	if err := c.ShouldBindQuery(&query); err != nil {
+		c.JSON(http.StatusBadRequest, types.NewErrorResponse(
+			"INVALID_QUERY",
+			"Invalid pagination parameters",
+			err.Error(),
+		))
+		return
+	}
+
+	// Start building base query
+	db := h.db.Model(&models.AppFeedback{}).Preload("User")
+
+	// Count total items
+	var total int64
+	if err := db.Count(&total).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
+			"DB_ERROR",
+			"Failed to count feedbacks",
+			err.Error(),
+		))
+		return
+	}
+
+	// Fetch paginated feedbacks, sorted by created_at desc (newest first)
+	var feedbacks []models.AppFeedback
+	offset := (query.Page - 1) * query.PageSize
+	if err := db.Order("created_at DESC").Offset(offset).Limit(query.PageSize).Find(&feedbacks).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
+			"DB_ERROR",
+			"Failed to fetch feedbacks",
+			err.Error(),
+		))
+		return
+	}
+
+	// Prepare pagination response
+	pagination := types.NewPaginationResponse(query.Page, query.PageSize, total)
+	c.JSON(http.StatusOK, types.NewSuccessResponse(
+		"Feedbacks retrieved successfully",
+		feedbacks,
+		&pagination,
+	))
+}

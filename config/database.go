@@ -5,10 +5,11 @@ import (
 	"log"
 	"os"
 
+	"dailyact/models"
+
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"dailyact/models"
 )
 
 func InitDB() *gorm.DB {
@@ -31,7 +32,7 @@ func InitDB() *gorm.DB {
 	}
 
 	// Auto-migrate the schema
-	err = db.AutoMigrate(&models.Category{}, &models.Activity{})
+	err = db.AutoMigrate(&models.Category{}, &models.Activity{}, &models.AppFeedback{})
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}
