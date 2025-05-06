@@ -6,6 +6,7 @@ import (
 	"dailyact/middleware"
 	"dailyact/seeds"
 	"log"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -89,5 +90,9 @@ func main() {
 	}
 
 	// Start server
-	r.Run(":8080")
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3005"
+	}
+	r.Run(":" + port) // Default port is 8080
 }
