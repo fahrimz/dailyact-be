@@ -55,6 +55,7 @@ func main() {
 	{
 		users.GET("", userHandler.GetUsers)
 		users.GET("/:id", userHandler.GetUserByID)
+		users.PUT("/:id/change_role", userHandler.ChangeRole)
 	}
 
 	// Category routes

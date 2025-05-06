@@ -24,3 +24,7 @@ type User struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 	LastLoginAt time.Time  `json:"last_login_at"`
 }
+
+type ChangeRoleRequest struct {
+	Role Role `json:"role" binding:"required"`
+}

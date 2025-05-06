@@ -84,3 +84,41 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 		nil,
 	))
 }
+
+func (h *UserHandler) ChangeRole(c *gin.Context) {
+	var user models.User
+	if err := h.db.First(&user, c.Param("id")).Error; err != nil {
+		c.JSON(http.StatusNotFound, types.NewErrorResponse(
+			"NOT_FOUND",
+			"User not found",
+			err.Error(),
+		))
+		return
+	}
+
+	var req models.ChangeRoleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, types.NewErrorResponse(
+			"INVALID_REQUEST",
+			"Invalid request body",
+			err.Error(),
+		))
+		return
+	}
+
+	user.Role = req.Role
+	if err := h.db.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
+			"DB_ERROR",
+			"Failed to update user role",
+			err.Error(),
+		))
+		return
+	}
+
+	c.JSON(http.StatusOK, types.NewSuccessResponse(
+		"User role updated successfully",
+		user,
+		nil,
+	))
+}
