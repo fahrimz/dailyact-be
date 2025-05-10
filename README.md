@@ -415,3 +415,53 @@ Legend:
   "category_id": 1
 }
 ```
+
+## Data Privacy and Encryption
+
+This application uses server-side encryption to protect user activity data, including descriptions and notes. This ensures that sensitive user data remains private, even at the database level.
+
+### Encryption Implementation
+
+We use AES-256-GCM encryption for all sensitive activity data:
+
+1. **Automatic Encryption**: Activity descriptions and notes are automatically encrypted before being stored in the database
+2. **Transparent Decryption**: Data is automatically decrypted before being sent to the frontend
+3. **Database-Level Protection**: Database administrators cannot view the content of encrypted fields
+4. **Per-User Data Isolation**: Activities are tied to specific users and cannot be accessed by other users
+
+### Setting Up Encryption
+
+To enable encryption, follow these steps:
+
+1. Generate a secure encryption key:
+   ```bash
+   go run cmd/generatekey/main.go
+   ```
+
+2. Add the generated key to your `.env` file:
+   ```
+   ENCRYPTION_KEY=your_generated_key
+   ```
+
+3. Run the migration script to encrypt existing data:
+   ```bash
+   go run cmd/encryptdata/main.go
+   ```
+
+4. Restart your application
+
+### How It Works
+
+The encryption system works transparently:
+
+1. When a user creates or updates an activity, the sensitive fields are encrypted before storage
+2. When activities are retrieved, the data is automatically decrypted
+3. All encryption/decryption happens on the server side
+4. Users interact with the application normally with no visible changes
+
+### Security Considerations
+
+- **Key Management**: Store the encryption key separately from the database. If possible, use a secrets management service.
+- **Key Rotation**: For enhanced security, consider periodically rotating the encryption key (requires re-encryption of data).
+- **Backups**: Always back up your data before running encryption migrations.
+- **Environment Security**: Ensure your .env file with the encryption key has restricted access permissions.
