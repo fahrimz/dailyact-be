@@ -181,8 +181,18 @@ func (h *Handler) DeleteCategory(c *gin.Context) {
 // Activity handlers
 func (h *Handler) CreateActivity(c *gin.Context) {
 	user, _ := c.Get("user")
-	var activity models.Activity
-	if err := c.ShouldBindJSON(&activity); err != nil {
+
+	// Use a temporary struct for JSON binding
+	var input struct {
+		Date        time.Time `json:"date"`
+		StartTime   time.Time `json:"start_time" binding:"required"`
+		EndTime     time.Time `json:"end_time" binding:"required"`
+		Description string    `json:"description" binding:"required"`
+		Notes       string    `json:"notes"`
+		CategoryID  uint      `json:"category_id" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, types.NewErrorResponse(
 			"INVALID_INPUT",
 			"Invalid input data",
@@ -191,7 +201,52 @@ func (h *Handler) CreateActivity(c *gin.Context) {
 		return
 	}
 
-	activity.UserID = user.(models.User).ID
+	// Create encryption service
+	encryptionService, err := models.NewEncryptionService()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
+			"ENCRYPTION_ERROR",
+			"Failed to initialize encryption service",
+			err.Error(),
+		))
+		return
+	}
+
+	// Encrypt description and notes
+	descriptionEncrypted, err := encryptionService.Encrypt(input.Description)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
+			"ENCRYPTION_ERROR",
+			"Failed to encrypt description",
+			err.Error(),
+		))
+		return
+	}
+
+	var notesEncrypted string
+	if input.Notes != "" {
+		notesEncrypted, err = encryptionService.Encrypt(input.Notes)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
+				"ENCRYPTION_ERROR",
+				"Failed to encrypt notes",
+				err.Error(),
+			))
+			return
+		}
+	}
+
+	// Create activity with encrypted data
+	activity := models.Activity{
+		Date:        input.Date,
+		StartTime:   input.StartTime,
+		EndTime:     input.EndTime,
+		Description: models.EncryptedString(descriptionEncrypted),
+		Notes:       models.EncryptedString(notesEncrypted),
+		CategoryID:  input.CategoryID,
+		UserID:      user.(models.User).ID,
+	}
+
 	if err := h.db.Create(&activity).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
 			"DB_ERROR",

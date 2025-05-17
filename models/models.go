@@ -33,6 +33,7 @@ type Activity struct {
 }
 
 func (a *Activity) BeforeCreate(tx *gorm.DB) (err error) {
+	// set date and duration automatically by calculating start and end time
 	a.Date = a.StartTime.UTC().Truncate(24 * time.Hour)
 	a.Duration = int(a.EndTime.Sub(a.StartTime).Seconds())
 
@@ -40,4 +41,16 @@ func (a *Activity) BeforeCreate(tx *gorm.DB) (err error) {
 		return errors.New("duration cannot be negative")
 	}
 	return nil
+}
+
+// Add BeforeUpdate hook to handle updates
+func (a *Activity) BeforeUpdate(tx *gorm.DB) (err error) {
+    // set date and duration automatically by calculating start and end time
+    a.Date = a.StartTime.UTC().Truncate(24 * time.Hour)
+    a.Duration = int(a.EndTime.Sub(a.StartTime).Seconds())
+
+    if a.Duration < 0 {
+        return errors.New("duration cannot be negative")
+    }
+    return nil
 }
