@@ -4,6 +4,7 @@ import (
 	"dailyact/config"
 	"dailyact/handlers"
 	"dailyact/middleware"
+	"dailyact/models"
 	"dailyact/seeds"
 	"log"
 	"os"
@@ -28,7 +29,13 @@ func main() {
 	}
 
 	// Initialize handlers and middleware
-	handler := handlers.NewHandler(db)
+	encryptionService, err := models.NewEncryptionService()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	handler, _ := handlers.NewHandler(db, encryptionService)
 	authHandler := handlers.NewAuthHandler(db)
 	userHandler := handlers.NewUserHandler(db)
 	mobileAuthHandler := handlers.NewMobileAuthHandler(db)

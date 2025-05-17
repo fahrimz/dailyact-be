@@ -11,14 +11,13 @@ import (
 )
 
 type Handler struct {
-	db *gorm.DB
+	db                *gorm.DB
+	encryptionService *models.EncryptionService
 }
 
-func NewHandler(db *gorm.DB) *Handler {
-	return &Handler{db: db}
+func NewHandler(db *gorm.DB, encryptionService *models.EncryptionService) (*Handler, error) {
+	return &Handler{db: db, encryptionService: encryptionService}, nil
 }
-
-// Category handlers
 func (h *Handler) CreateCategory(c *gin.Context) {
 	var category models.Category
 	if err := c.ShouldBindJSON(&category); err != nil {
@@ -201,19 +200,8 @@ func (h *Handler) CreateActivity(c *gin.Context) {
 		return
 	}
 
-	// Create encryption service
-	encryptionService, err := models.NewEncryptionService()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
-			"ENCRYPTION_ERROR",
-			"Failed to initialize encryption service",
-			err.Error(),
-		))
-		return
-	}
-
 	// Encrypt description and notes
-	descriptionEncrypted, err := encryptionService.Encrypt(input.Description)
+	descriptionEncrypted, err := h.encryptionService.Encrypt(input.Description)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
 			"ENCRYPTION_ERROR",
@@ -225,7 +213,7 @@ func (h *Handler) CreateActivity(c *gin.Context) {
 
 	var notesEncrypted string
 	if input.Notes != "" {
-		notesEncrypted, err = encryptionService.Encrypt(input.Notes)
+		notesEncrypted, err = h.encryptionService.Encrypt(input.Notes)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
 				"ENCRYPTION_ERROR",
@@ -352,7 +340,7 @@ func (h *Handler) GetActivityByID(c *gin.Context) {
 func (h *Handler) UpdateActivity(c *gin.Context) {
 	// Check if activity exists
 	var activity models.Activity
-	if err := h.db.First(&activity, c.Param("id")).Error; err != nil {
+	if err := h.db.Preload("Category").First(&activity, c.Param("id")).Error; err != nil {
 		c.JSON(http.StatusNotFound, types.NewErrorResponse(
 			"NOT_FOUND",
 			"Activity not found",
@@ -361,8 +349,17 @@ func (h *Handler) UpdateActivity(c *gin.Context) {
 		return
 	}
 
-	// Bind new data
-	if err := c.ShouldBindJSON(&activity); err != nil {
+	// Use a temporary struct for JSON binding
+	var input struct {
+		Date        time.Time `json:"date"`
+		StartTime   time.Time `json:"start_time" binding:"required"`
+		EndTime     time.Time `json:"end_time" binding:"required"`
+		Description string    `json:"description" binding:"required"`
+		Notes       string    `json:"notes"`
+		CategoryID  uint      `json:"category_id" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, types.NewErrorResponse(
 			"INVALID_INPUT",
 			"Invalid input data",
@@ -371,11 +368,64 @@ func (h *Handler) UpdateActivity(c *gin.Context) {
 		return
 	}
 
+	// Create encryption service
+	encryptionService, err := models.NewEncryptionService()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
+			"ENCRYPTION_ERROR",
+			"Failed to initialize encryption service",
+			err.Error(),
+		))
+		return
+	}
+
+	// Encrypt description and notes
+	descriptionEncrypted, err := encryptionService.Encrypt(input.Description)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
+			"ENCRYPTION_ERROR",
+			"Failed to encrypt description",
+			err.Error(),
+		))
+		return
+	}
+
+	var notesEncrypted string
+	if input.Notes != "" {
+		notesEncrypted, err = encryptionService.Encrypt(input.Notes)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
+				"ENCRYPTION_ERROR",
+				"Failed to encrypt notes",
+				err.Error(),
+			))
+			return
+		}
+	}
+
+	// Update activity fields
+	activity.Date = input.Date
+	activity.StartTime = input.StartTime
+	activity.EndTime = input.EndTime
+	activity.Description = models.EncryptedString(descriptionEncrypted)
+	activity.Notes = models.EncryptedString(notesEncrypted)
+	activity.CategoryID = input.CategoryID
+
 	// Save changes
 	if err := h.db.Save(&activity).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
 			"DB_ERROR",
 			"Failed to update activity",
+			err.Error(),
+		))
+		return
+	}
+
+	// Reload the activity with Category
+	if err := h.db.Preload("Category").First(&activity, activity.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, types.NewErrorResponse(
+			"DB_ERROR",
+			"Failed to reload activity data",
 			err.Error(),
 		))
 		return
